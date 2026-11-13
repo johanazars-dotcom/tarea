@@ -93,16 +93,11 @@ export default function AccesoSuperusuario({ onAccesoAutorizado }) {
   return (
     <div className="pantalla-acceso-superusuario">
       <div className="tarjeta-acceso-superusuario">
-        <div className="barra-superior-acceso" />
-
         <div className="cabecera-acceso-superusuario">
-          <div className="icono-acceso-superusuario" aria-hidden="true">
-            🛡️
-          </div>
-          <span className="insignia-rol-superusuario">Acceso Exclusivo · Superusuario</span>
-          <h1>Panel de Precios y Compras de Medicamentos</h1>
+          <span className="insignia-rol-superusuario">Acceso de Superusuario</span>
+          <h1>Precios y Compras de Medicamentos</h1>
           <p className="descripcion-acceso-superusuario">
-            Inicia sesión con tu cuenta de superadministrador o valida un token emitido para acceder al panel.
+            Inicia sesión con tu cuenta de superadministrador o valida un token emitido para ingresar al sistema de auditoría.
           </p>
         </div>
 

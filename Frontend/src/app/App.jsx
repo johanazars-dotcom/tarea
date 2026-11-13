@@ -126,7 +126,6 @@ export default function App() {
     return (
       <div className="pantalla-acceso-superusuario">
         <div className="tarjeta-acceso-superusuario tarjeta-verificacion-sesion">
-          <div className="barra-superior-acceso" />
           <p className="texto-verificando">Validando token de superusuario...</p>
         </div>
       </div>

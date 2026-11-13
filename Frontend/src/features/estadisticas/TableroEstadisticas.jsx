@@ -92,7 +92,7 @@ export default function TableroEstadisticas({ opcionesFiltros, recargaDatos = 0 
     <section id="estadisticas" className="tarjeta-panel">
       <div className="encabezado-panel">
         <div>
-          <span className="etiqueta-seccion">Módulo 2 · Analítica en Vivo</span>
+          <span className="etiqueta-seccion">Análisis del segmento</span>
           <h2>Tablero de Estadísticas Dinámicas y Manipulables</h2>
           <p className="subtitulo-panel">
             Cada filtro envía una petición al backend para recalcular totales, promedios, máximos y distribución agrupada exactamente sobre el segmento seleccionado.

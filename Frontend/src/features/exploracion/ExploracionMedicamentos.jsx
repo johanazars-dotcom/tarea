@@ -202,7 +202,7 @@ export default function ExploracionMedicamentos({
     <section id="exploracion" className="tarjeta-panel">
       <div className="encabezado-panel">
         <div>
-          <span className="etiqueta-seccion">Módulo 1 · Consulta Paginada</span>
+          <span className="etiqueta-seccion">Consulta de registros</span>
           <h2>Exploración Paginada y Controles de Consulta</h2>
           <p className="subtitulo-panel">
             Navegación por páginas, búsqueda textual, filtros por categoría y ordenamiento sincronizados en tiempo real con <code>GET /api/medicamentos/</code>.
