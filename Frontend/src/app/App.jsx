@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
-import api, { API_BASE_URL, setAuthToken, validarTokenSuperusuario } from './api';
-import './App.css';
-import AccesoSuperusuario from './components/AccesoSuperusuario';
-import ExploracionMedicamentos from './components/ExploracionMedicamentos';
-import TableroEstadisticas from './components/TableroEstadisticas';
+import api, { API_BASE_URL, setAuthToken, validarTokenSuperusuario } from '../shared/api';
+import AccesoSuperusuario from '../features/autenticacion/AccesoSuperusuario';
+import ExploracionMedicamentos from '../features/exploracion/ExploracionMedicamentos';
+import TableroEstadisticas from '../features/estadisticas/TableroEstadisticas';
 
 const STORAGE_TOKEN_KEY = 'medicamentos_superusuario_token';
 const STORAGE_USER_KEY = 'medicamentos_superusuario_nombre';
@@ -23,6 +22,7 @@ export default function App() {
     entidades_compradoras: [],
     anios: [],
   });
+  const [recargaDatos, setRecargaDatos] = useState(0);
 
   useEffect(() => {
     setAuthToken(token);
@@ -81,7 +81,7 @@ export default function App() {
     return () => {
       cancelado = true;
     };
-  }, [superusuarioVerificado]);
+  }, [superusuarioVerificado, recargaDatos]);
 
   const manejarAccesoAutorizado = (nuevoToken, nombreUsuario) => {
     localStorage.setItem(STORAGE_TOKEN_KEY, nuevoToken);
@@ -168,9 +168,11 @@ export default function App() {
         <ExploracionMedicamentos
           opcionesFiltros={opcionesFiltros}
           onExportarPdf={descargarPDF}
+          recargaDatos={recargaDatos}
+          onDatosImportados={() => setRecargaDatos((prev) => prev + 1)}
         />
 
-        <TableroEstadisticas opcionesFiltros={opcionesFiltros} />
+        <TableroEstadisticas opcionesFiltros={opcionesFiltros} recargaDatos={recargaDatos} />
       </main>
 
       <footer className="pie-pagina">

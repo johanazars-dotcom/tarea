@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import api from '../api';
-import { formatearMoneda, formatearNumero } from '../utils/formatters';
+import api from '../../shared/api';
+import { formatearMoneda, formatearNumero } from '../../shared/formateadores';
 
 const CAMPOS_ORDEN = [
   { value: 'fecha_reporte', label: 'Fecha de reporte' },
@@ -28,13 +28,20 @@ function construirPaginasVisibles(actual, total) {
   return resultado;
 }
 
-export default function ExploracionMedicamentos({ opcionesFiltros, onExportarPdf }) {
+export default function ExploracionMedicamentos({
+  opcionesFiltros,
+  onExportarPdf,
+  recargaDatos = 0,
+  onDatosImportados,
+}) {
   const [medicamentos, setMedicamentos] = useState([]);
   const [totalRegistros, setTotalRegistros] = useState(0);
   const [siguientePagina, setSiguientePagina] = useState(null);
   const [anteriorPagina, setAnteriorPagina] = useState(null);
   const [pagina, setPagina] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [importando, setImportando] = useState(false);
+  const [estadoImportacion, setEstadoImportacion] = useState(null);
 
   const [textoInput, setTextoInput] = useState('');
   const [busqueda, setBusqueda] = useState('');
@@ -56,6 +63,7 @@ export default function ExploracionMedicamentos({ opcionesFiltros, onExportarPdf
     entidadCompradora,
     anio,
     ordering,
+    recargaDatos,
   });
 
   const [estadoConsulta, setEstadoConsulta] = useState({
@@ -116,7 +124,31 @@ export default function ExploracionMedicamentos({ opcionesFiltros, onExportarPdf
     return () => {
       cancelado = true;
     };
-  }, [consultaKey, pagina, pageSize, busqueda, formaFarmaceutica, principioActivo, entidadCompradora, anio, ordering]);
+  }, [consultaKey, pagina, pageSize, busqueda, formaFarmaceutica, principioActivo, entidadCompradora, anio, ordering, recargaDatos]);
+
+  const generarLoteMedicamentos = async () => {
+    setImportando(true);
+    setEstadoImportacion(null);
+    try {
+      const { data } = await api.post('api/medicamentos/inyeccion/', {
+        cantidad: 500,
+        continuar: true,
+      });
+      setEstadoImportacion({
+        tipo: 'exito',
+        texto: `${formatearNumero(data.creados)} nuevos medicamentos generados en ${data.ms} ms (total en PostgreSQL: ${formatearNumero(data.total)}).`,
+      });
+      setPagina(1);
+      onDatosImportados?.();
+    } catch (err) {
+      setEstadoImportacion({
+        tipo: 'error',
+        texto: err.response?.data?.detalle || 'No se pudo generar el lote de medicamentos.',
+      });
+    } finally {
+      setImportando(false);
+    }
+  };
 
   const manejarSubmitBusqueda = (e) => {
     e.preventDefault();
@@ -177,6 +209,14 @@ export default function ExploracionMedicamentos({ opcionesFiltros, onExportarPdf
           </p>
         </div>
         <div className="acciones-encabezado-panel">
+          <button
+            type="button"
+            className="boton boton-primario"
+            onClick={generarLoteMedicamentos}
+            disabled={importando}
+          >
+            {importando ? 'Generando...' : 'Generar lote de medicamentos'}
+          </button>
           {onExportarPdf && (
             <button
               type="button"
@@ -325,6 +365,14 @@ export default function ExploracionMedicamentos({ opcionesFiltros, onExportarPdf
             : `Mostrando ${formatearNumero(inicioRango)}–${formatearNumero(finRango)} de ${formatearNumero(totalRegistros)} · Página ${pagina} de ${totalPaginas}`}
         </div>
       </div>
+
+      {estadoImportacion && (
+        <div
+          className={`caja-alerta ${estadoImportacion.tipo === 'error' ? 'alerta-error' : 'alerta-exito'}`}
+        >
+          {estadoImportacion.texto}
+        </div>
+      )}
 
       {error && <div className="caja-alerta alerta-error">{error}</div>}
 

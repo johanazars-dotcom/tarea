@@ -184,3 +184,45 @@ class PruebasAPIMedicamentos(APITestCase):
         self.assertEqual(res_validado.status_code, status.HTTP_200_OK)
         self.assertTrue(res_validado.data['es_superusuario'])
         self.assertEqual(res_validado.data['usuario'], 'superadmin')
+
+    def test_inyeccion_masiva_catalogo_propio_y_deduplicacion(self):
+        url_inyeccion = reverse('inyeccion-medicamentos')
+        login_url = reverse('api_token_auth')
+
+        # 1. Sin autenticacion -> 401 Unauthorized
+        res_anon = self.client.post(url_inyeccion, {'cantidad': 5})
+        self.assertEqual(res_anon.status_code, status.HTTP_401_UNAUTHORIZED)
+
+        res_login = self.client.post(login_url, {'username': 'superadmin', 'password': 'SuperPassword123!'})
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {res_login.data['token']}")
+
+        # 2. Cantidad invalida -> 400 Bad Request
+        res_invalida = self.client.post(url_inyeccion, {'cantidad': 0})
+        self.assertEqual(res_invalida.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # 3. Generacion inicial con catalogo propio de medicamentos -> crea 5
+        res_ok = self.client.post(url_inyeccion, {'cantidad': 5}, format='json')
+        self.assertEqual(res_ok.status_code, status.HTTP_200_OK)
+        self.assertEqual(res_ok.data['creados'], 5)
+        self.assertEqual(res_ok.data['omitidos'], 0)
+        self.assertEqual(res_ok.data['total'], 20)
+
+        creado = ReporteMedicamento.objects.get(codigo_reporte='MED-COL-000001')
+        self.assertTrue(creado.principio_activo)
+        self.assertTrue(creado.laboratorio)
+        self.assertGreater(creado.precio_unitario, Decimal('0'))
+        self.assertGreaterEqual(creado.cantidad_comprada, 1)
+
+        # 4. Segunda ejecucion en el mismo rango -> omite duplicados
+        res_dup = self.client.post(url_inyeccion, {'cantidad': 5}, format='json')
+        self.assertEqual(res_dup.status_code, status.HTTP_200_OK)
+        self.assertEqual(res_dup.data['creados'], 0)
+        self.assertEqual(res_dup.data['omitidos'], 5)
+        self.assertEqual(res_dup.data['total'], 20)
+
+        # 5. Con continuar=True -> genera los siguientes 5 sin duplicar
+        res_next = self.client.post(url_inyeccion, {'cantidad': 5, 'continuar': True}, format='json')
+        self.assertEqual(res_next.status_code, status.HTTP_200_OK)
+        self.assertEqual(res_next.data['creados'], 5)
+        self.assertEqual(res_next.data['total'], 25)
+        self.assertTrue(ReporteMedicamento.objects.filter(codigo_reporte='MED-COL-000010').exists())

@@ -1,4 +1,5 @@
 from decimal import Decimal
+import time
 from django.db.models import Avg, Count, DecimalField, F, Max, Min, Q, Sum
 from django.db.models.functions import ExtractYear
 from django.http import HttpResponse
@@ -6,12 +7,13 @@ from django.utils import timezone
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from rest_framework import filters, status, viewsets
-from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from .fuente_datos import TAMANO_PAGINA, consultar_pagina, fila_a_medicamento
 from .models import ReporteMedicamento
+from .paginacion import PaginacionMedicamentos
 from .serializers import ReporteMedicamentoSerializer
 
 
@@ -48,12 +50,6 @@ def _aplicar_filtros_medicamentos(queryset, params, incluir_search=False):
             )
 
     return queryset
-
-
-class PaginacionMedicamentos(PageNumberPagination):
-    page_size = 10
-    page_size_query_param = 'page_size'
-    max_page_size = 100
 
 
 class ReporteMedicamentoViewSet(viewsets.ModelViewSet):
@@ -245,3 +241,83 @@ class ExportarPDFView(APIView):
         p.showPage()
         p.save()
         return response
+
+
+def descargar_medicamentos(cantidad, desplazamiento=0):
+    """Genera e inyecta reportes propios de medicamentos por lotes en PostgreSQL."""
+    inicio = time.perf_counter()
+    existentes = set(
+        ReporteMedicamento.objects.exclude(codigo_reporte__isnull=True)
+        .values_list('codigo_reporte', flat=True)
+    )
+    nuevos = []
+    recibidos = 0
+    omitidos = 0
+    cursor = desplazamiento
+
+    while recibidos < cantidad:
+        lote = consultar_pagina(min(TAMANO_PAGINA, cantidad - recibidos), cursor)
+        if not lote:
+            break
+        recibidos += len(lote)
+        cursor += len(lote)
+        for fila in lote:
+            medicamento = fila_a_medicamento(fila)
+            if not medicamento or medicamento.codigo_reporte in existentes:
+                omitidos += 1
+                continue
+            existentes.add(medicamento.codigo_reporte)
+            nuevos.append(medicamento)
+
+    if nuevos:
+        ReporteMedicamento.objects.bulk_create(nuevos, batch_size=1000, ignore_conflicts=True)
+
+    ms = (time.perf_counter() - inicio) * 1000
+    return {
+        'creados': len(nuevos),
+        'recibidos': recibidos,
+        'omitidos': omitidos,
+        'total': ReporteMedicamento.objects.count(),
+        'ms': round(ms, 2),
+        'por_segundo': round(len(nuevos) / (ms / 1000), 1) if ms > 0 else 0,
+    }
+
+
+class VistaInyeccionMasiva(APIView):
+    """Inyecta un lote de reportes propios de medicamentos en PostgreSQL."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            cantidad = int(request.data.get('cantidad'))
+        except (TypeError, ValueError):
+            cantidad = 0
+        if not 1 <= cantidad <= 50000:
+            return Response(
+                {'detalle': 'cantidad debe ser un entero entre 1 y 50000.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if request.data.get('continuar'):
+            desplazamiento = ReporteMedicamento.objects.filter(
+                codigo_reporte__startswith='MED-COL-'
+            ).count()
+        else:
+            try:
+                desplazamiento = int(request.data.get('desplazamiento', 0))
+            except (TypeError, ValueError):
+                desplazamiento = -1
+            if desplazamiento < 0:
+                return Response(
+                    {'detalle': 'desplazamiento debe ser un entero mayor o igual a 0.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        try:
+            return Response(descargar_medicamentos(cantidad, desplazamiento=desplazamiento))
+        except Exception as exc:
+            return Response(
+                {'detalle': f'Error generando lote de medicamentos: {exc}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )

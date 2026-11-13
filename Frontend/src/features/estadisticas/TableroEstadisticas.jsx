@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import api from '../api';
-import { formatearMoneda, formatearNumero } from '../utils/formatters';
+import api from '../../shared/api';
+import { formatearMoneda, formatearNumero } from '../../shared/formateadores';
 
 const OPCIONES_AGRUPACION = [
   { value: 'principio_activo', label: 'Principio activo' },
@@ -11,7 +11,7 @@ const OPCIONES_AGRUPACION = [
   { value: 'principio_anio', label: 'Principio activo y año' },
 ];
 
-export default function TableroEstadisticas({ opcionesFiltros }) {
+export default function TableroEstadisticas({ opcionesFiltros, recargaDatos = 0 }) {
   const [formaFarmaceutica, setFormaFarmaceutica] = useState('');
   const [anio, setAnio] = useState('');
   const [entidadCompradora, setEntidadCompradora] = useState('');
@@ -27,6 +27,7 @@ export default function TableroEstadisticas({ opcionesFiltros }) {
     principioActivo,
     laboratorio,
     agruparPor,
+    recargaDatos,
   });
   const [estadoConsulta, setEstadoConsulta] = useState({ key: '', error: null });
 
@@ -61,7 +62,7 @@ export default function TableroEstadisticas({ opcionesFiltros }) {
     return () => {
       cancelado = true;
     };
-  }, [consultaKey, formaFarmaceutica, anio, entidadCompradora, principioActivo, laboratorio, agruparPor]);
+  }, [consultaKey, formaFarmaceutica, anio, entidadCompradora, principioActivo, laboratorio, agruparPor, recargaDatos]);
 
   const restablecerControles = () => {
     setFormaFarmaceutica('');

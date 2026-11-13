@@ -1,6 +1,8 @@
 from django.db import models
 
+
 class ReporteMedicamento(models.Model):
+    codigo_reporte = models.CharField(max_length=80, unique=True, null=True, blank=True)
     principio_activo = models.CharField(max_length=255, db_index=True)
     laboratorio = models.CharField(max_length=255, db_index=True)
     forma_farmaceutica = models.CharField(max_length=150)

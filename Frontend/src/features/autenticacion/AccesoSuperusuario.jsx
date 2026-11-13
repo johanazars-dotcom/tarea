@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { API_BASE_URL, postSinToken, validarTokenSuperusuario } from '../api';
+import { API_BASE_URL, postSinToken, validarTokenSuperusuario } from '../../shared/api';
 
 export default function AccesoSuperusuario({ onAccesoAutorizado }) {
   const [modo, setModo] = useState('credenciales');

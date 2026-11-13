@@ -6,6 +6,7 @@ from .views import (
     OperacionProtegidaView,
     ReporteMedicamentoViewSet,
     VistaFiltrosDisponibles,
+    VistaInyeccionMasiva,
     VistaValidacionSuperusuario,
 )
 
@@ -13,6 +14,7 @@ router = DefaultRouter()
 router.register(r'medicamentos', ReporteMedicamentoViewSet)
 
 urlpatterns = [
+    path('api/medicamentos/inyeccion/', VistaInyeccionMasiva.as_view(), name='inyeccion-medicamentos'),
     path('api/', include(router.urls)),
     path('api/filtros/', VistaFiltrosDisponibles.as_view(), name='filtros-disponibles'),
     path('api/estadisticas/', EstadisticasMedicamentosView.as_view(), name='estadisticas-medicamentos'),
