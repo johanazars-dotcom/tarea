@@ -1,215 +1,222 @@
 import { useState } from 'react';
-import { postSinToken, validarTokenSuperusuario } from '../api';
+import { API_BASE_URL, postSinToken, validarTokenSuperusuario } from '../api';
 
-export default function AccesoSuperusuario() {
-  const [usuarioAdmin, setUsuarioAdmin] = useState('');
-  const [claveAdmin, setClaveAdmin] = useState('');
-  const [tokenIngresado, setTokenIngresado] = useState('');
+export default function AccesoSuperusuario({ onAccesoAutorizado }) {
+  const [modo, setModo] = useState('credenciales');
+  const [usuario, setUsuario] = useState('');
+  const [clave, setClave] = useState('');
   const [mostrarClave, setMostrarClave] = useState(false);
+  const [tokenManual, setTokenManual] = useState('');
 
-  const [cargandoLogin, setCargandoLogin] = useState(false);
-  const [cargandoValidacion, setCargandoValidacion] = useState(false);
-  const [resultado, setResultado] = useState(null);
+  const [cargando, setCargando] = useState(false);
+  const [feedback, setFeedback] = useState(null);
 
-  const evaluarToken = async (tokenAProbar, origen) => {
-    setCargandoValidacion(true);
-    const tokenLimpio = (tokenAProbar || '').trim();
-
+  const validarYEntrar = async (tokenAValidar) => {
+    const tokenLimpio = (tokenAValidar || '').trim();
     try {
       const response = await validarTokenSuperusuario(tokenLimpio);
-      setResultado({
-        tipo: 'exito',
-        estado: response.status,
-        titulo: 'Superusuario verificado',
-        origen,
-        conToken: Boolean(tokenLimpio),
-        payload: response.data,
+      const data = response.data;
+      if (data?.es_superusuario) {
+        onAccesoAutorizado(tokenLimpio, data.usuario);
+        return;
+      }
+      setFeedback({
+        tipo: 'advertencia',
+        estado: 403,
+        titulo: 'Acceso denegado: la cuenta no es superusuario',
+        payload: data,
       });
     } catch (err) {
       const status = err.response?.status || 500;
       const payload = err.response?.data || { detail: err.message };
-      setResultado({
+      setFeedback({
         tipo: status === 403 ? 'advertencia' : 'error',
         estado: status,
         titulo:
           status === 403
-            ? 'Token válido, pero sin rol de superusuario'
+            ? 'Token válido, pero sin privilegios de superusuario'
             : status === 401
-              ? 'Token rechazado o ausente (401 Unauthorized)'
-              : 'Error de validación',
-        origen,
-        conToken: Boolean(tokenLimpio),
+              ? 'Rechazo 401: token ausente o inválido'
+              : 'Error al validar el token en el servidor',
         payload,
       });
-    } finally {
-      setCargandoValidacion(false);
     }
   };
 
-  const manejarLoginSuperusuario = async (e) => {
+  const manejarSubmitCredenciales = async (e) => {
     e.preventDefault();
-    setCargandoLogin(true);
-    setResultado(null);
+    setCargando(true);
+    setFeedback(null);
 
     try {
       const resLogin = await postSinToken('api-token-auth/', {
-        username: usuarioAdmin.trim(),
-        password: claveAdmin,
+        username: usuario.trim(),
+        password: clave,
       });
       const nuevoToken = resLogin.data.token;
-      setTokenIngresado(nuevoToken);
-      setClaveAdmin('');
-      await evaluarToken(nuevoToken, `Login independiente (${usuarioAdmin.trim()})`);
+      setClave('');
+      await validarYEntrar(nuevoToken);
     } catch (err) {
       const status = err.response?.status || 400;
-      const payload = err.response?.data || { detail: 'No fue posible iniciar sesión.' };
-      setResultado({
+      const payload = err.response?.data || { detail: 'No se pudo conectar con el servidor.' };
+      setFeedback({
         tipo: 'error',
         estado: status,
-        titulo: 'Credenciales inválidas al solicitar token',
-        origen: 'POST /api-token-auth/',
-        conToken: false,
+        titulo: 'Usuario o contraseña incorrectos',
         payload,
       });
     } finally {
-      setCargandoLogin(false);
+      setCargando(false);
     }
   };
 
-  const limpiarPortal = () => {
-    setUsuarioAdmin('');
-    setClaveAdmin('');
-    setTokenIngresado('');
-    setResultado(null);
+  const manejarValidacionManual = async (e) => {
+    e.preventDefault();
+    setCargando(true);
+    setFeedback(null);
+    await validarYEntrar(tokenManual);
+    setCargando(false);
+  };
+
+  const probarSinCredencial = async () => {
+    setCargando(true);
+    setFeedback(null);
+    await validarYEntrar('');
+    setCargando(false);
+  };
+
+  const cambiarModo = (nuevoModo) => {
+    setModo(nuevoModo);
+    setFeedback(null);
   };
 
   return (
-    <section id="superusuario" className="portal-superusuario">
-      <div className="encabezado-superusuario">
-        <div>
-          <span className="insignia-superusuario">Acceso Independiente · Validación de Rol</span>
-          <h2>Portal de Login y Validación de Token de Superusuario</h2>
-          <p className="subtitulo-superusuario">
-            Inicio de sesión aislado y verificador directo contra <code>POST /api/validar-superusuario/</code> para confirmar si un token es auténtico (<code>200</code> vs <code>401</code>) y si pertenece a un superusuario (<code>200</code> vs <code>403</code>).
+    <div className="pantalla-acceso-superusuario">
+      <div className="tarjeta-acceso-superusuario">
+        <div className="barra-superior-acceso" />
+
+        <div className="cabecera-acceso-superusuario">
+          <div className="icono-acceso-superusuario" aria-hidden="true">
+            🛡️
+          </div>
+          <span className="insignia-rol-superusuario">Acceso Exclusivo · Superusuario</span>
+          <h1>Panel de Precios y Compras de Medicamentos</h1>
+          <p className="descripcion-acceso-superusuario">
+            Inicia sesión con tu cuenta de superadministrador o valida un token emitido para acceder al panel.
           </p>
         </div>
-        <button type="button" className="boton-super-secundario" onClick={limpiarPortal}>
-          Reiniciar portal
-        </button>
-      </div>
 
-      <div className="grilla-superusuario">
-        <form onSubmit={manejarLoginSuperusuario} className="tarjeta-login-superusuario">
-          <div className="cabecera-tarjeta-super">
-            <span className="icono-escudo" aria-hidden="true">🛡️</span>
-            <div>
-              <h3>Login aparte de Superusuario</h3>
-              <p>Solicita el token y verifica privilegios en un solo flujo.</p>
-            </div>
-          </div>
+        <div className="selector-modo-acceso" role="tablist" aria-label="Método de acceso">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={modo === 'credenciales'}
+            className={`boton-modo-acceso ${modo === 'credenciales' ? 'boton-modo-activo' : ''}`}
+            onClick={() => cambiarModo('credenciales')}
+          >
+            Usuario y contraseña
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={modo === 'token'}
+            className={`boton-modo-acceso ${modo === 'token' ? 'boton-modo-activo' : ''}`}
+            onClick={() => cambiarModo('token')}
+          >
+            Validar token
+          </button>
+        </div>
 
-          <label className="campo-superusuario">
-            <span>Usuario superadministrador</span>
-            <input
-              type="text"
-              className="entrada-superusuario"
-              value={usuarioAdmin}
-              onChange={(e) => setUsuarioAdmin(e.target.value)}
-              placeholder="Ej. johann"
-              required
-              autoComplete="off"
-            />
-          </label>
-
-          <label className="campo-superusuario">
-            <span>Contraseña</span>
-            <div className="fila-clave-super">
+        {modo === 'credenciales' ? (
+          <form onSubmit={manejarSubmitCredenciales} className="formulario-acceso-superusuario">
+            <label className="grupo-campo">
+              <span>Usuario superadministrador</span>
               <input
-                type={mostrarClave ? 'text' : 'password'}
-                className="entrada-superusuario"
-                value={claveAdmin}
-                onChange={(e) => setClaveAdmin(e.target.value)}
-                placeholder="Contraseña del superusuario"
+                type="text"
+                className="control-entrada"
+                value={usuario}
+                onChange={(e) => setUsuario(e.target.value)}
+                placeholder="Ej. johann"
                 required
-                autoComplete="off"
+                autoComplete="username"
               />
+            </label>
+
+            <label className="grupo-campo">
+              <span>Contraseña</span>
+              <div className="campo-clave-acceso">
+                <input
+                  type={mostrarClave ? 'text' : 'password'}
+                  className="control-entrada"
+                  value={clave}
+                  onChange={(e) => setClave(e.target.value)}
+                  placeholder="Ingresa tu contraseña"
+                  required
+                  autoComplete="current-password"
+                />
+                <button
+                  type="button"
+                  className="boton boton-secundario boton-ver-clave"
+                  onClick={() => setMostrarClave((v) => !v)}
+                >
+                  {mostrarClave ? 'Ocultar' : 'Ver'}
+                </button>
+              </div>
+            </label>
+
+            <button type="submit" className="boton boton-primario boton-ancho-completo" disabled={cargando}>
+              {cargando ? 'Validando superusuario...' : 'Iniciar sesión y validar acceso'}
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={manejarValidacionManual} className="formulario-acceso-superusuario">
+            <label className="grupo-campo">
+              <span>Token de autenticación</span>
+              <input
+                type="text"
+                className="control-entrada numero-monoespaciado"
+                value={tokenManual}
+                onChange={(e) => setTokenManual(e.target.value)}
+                placeholder="Pega aquí el token hexadecimal..."
+              />
+            </label>
+
+            <div className="acciones-doble-acceso">
+              <button type="submit" className="boton boton-primario" disabled={cargando}>
+                {cargando ? 'Validando...' : 'Validar token e ingresar'}
+              </button>
               <button
                 type="button"
-                className="boton-super-secundario"
-                onClick={() => setMostrarClave((v) => !v)}
+                className="boton boton-peligro-contorno"
+                disabled={cargando}
+                onClick={probarSinCredencial}
               >
-                {mostrarClave ? 'Ocultar' : 'Ver'}
+                Probar sin token (401)
               </button>
             </div>
-          </label>
+          </form>
+        )}
 
-          <button
-            type="submit"
-            className="boton-super-primario"
-            disabled={cargandoLogin || cargandoValidacion}
+        {feedback && (
+          <div
+            className={`alerta-validacion-super alerta-validacion-${feedback.tipo}`}
+            role="alert"
           >
-            {cargandoLogin ? 'Validando acceso...' : 'Iniciar sesión y validar superusuario'}
-          </button>
-        </form>
-
-        <div className="tarjeta-validador-superusuario">
-          <div className="cabecera-tarjeta-super">
-            <span className="icono-escudo" aria-hidden="true">🔑</span>
-            <div>
-              <h3>Validador manual de Token</h3>
-              <p>Pega cualquier token emitido para comprobar su validez y nivel de acceso.</p>
+            <div className="cabecera-alerta-super">
+              <span className={`insignia-estado-acceso estado-acceso-${feedback.tipo}`}>
+                HTTP {feedback.estado}
+              </span>
+              <strong>{feedback.titulo}</strong>
             </div>
+            <pre className="vista-json">{JSON.stringify(feedback.payload, null, 2)}</pre>
           </div>
+        )}
 
-          <label className="campo-superusuario">
-            <span>Token a validar (sin el prefijo "Token ")</span>
-            <input
-              type="text"
-              className="entrada-superusuario entrada-token-super"
-              value={tokenIngresado}
-              onChange={(e) => setTokenIngresado(e.target.value)}
-              placeholder="Pega aquí el token hexadecimal..."
-            />
-          </label>
-
-          <div className="acciones-validador-super">
-            <button
-              type="button"
-              className="boton-super-primario"
-              disabled={cargandoValidacion}
-              onClick={() => evaluarToken(tokenIngresado, 'Validación manual con token')}
-            >
-              {cargandoValidacion ? 'Verificando...' : 'Validar token'}
-            </button>
-            <button
-              type="button"
-              className="boton-super-peligro"
-              disabled={cargandoValidacion}
-              onClick={() => evaluarToken('', 'Prueba sin credencial')}
-            >
-              Probar sin token (401)
-            </button>
-          </div>
-
-          {resultado && (
-            <div
-              className={`resultado-superusuario resultado-super-${resultado.tipo}`}
-              role="status"
-            >
-              <div className="cabecera-resultado-super">
-                <span className={`etiqueta-estado-super estado-super-${resultado.tipo}`}>
-                  HTTP {resultado.estado}
-                </span>
-                <span className="origen-resultado-super">{resultado.origen}</span>
-              </div>
-              <p className="titulo-resultado-super">{resultado.titulo}</p>
-              <pre className="json-superusuario">
-                {JSON.stringify(resultado.payload, null, 2)}
-              </pre>
-            </div>
-          )}
+        <div className="pie-tarjeta-acceso">
+          <span>Servidor: <code>{API_BASE_URL}</code></span>
+          <span>Validado mediante <code>POST /api/validar-superusuario/</code></span>
         </div>
       </div>
-    </section>
+    </div>
   );
 }

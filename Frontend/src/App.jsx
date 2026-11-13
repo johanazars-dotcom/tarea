@@ -1,15 +1,21 @@
 import { useEffect, useState } from 'react';
-import api, { API_BASE_URL, setAuthToken } from './api';
+import api, { API_BASE_URL, setAuthToken, validarTokenSuperusuario } from './api';
 import './App.css';
 import AccesoSuperusuario from './components/AccesoSuperusuario';
 import ExploracionMedicamentos from './components/ExploracionMedicamentos';
-import PanelAutenticacion from './components/PanelAutenticacion';
 import TableroEstadisticas from './components/TableroEstadisticas';
 
-const STORAGE_TOKEN_KEY = 'medicamentos_auth_token';
-const STORAGE_USER_KEY = 'medicamentos_auth_user';
+const STORAGE_TOKEN_KEY = 'medicamentos_superusuario_token';
+const STORAGE_USER_KEY = 'medicamentos_superusuario_nombre';
 
 export default function App() {
+  const [token, setToken] = useState(() => localStorage.getItem(STORAGE_TOKEN_KEY) || '');
+  const [usuario, setUsuario] = useState(() => localStorage.getItem(STORAGE_USER_KEY) || '');
+  const [superusuarioVerificado, setSuperusuarioVerificado] = useState(false);
+  const [verificandoSesion, setVerificandoSesion] = useState(() =>
+    Boolean(localStorage.getItem(STORAGE_TOKEN_KEY))
+  );
+
   const [opcionesFiltros, setOpcionesFiltros] = useState({
     principios_activos: [],
     formas_farmaceuticas: [],
@@ -18,34 +24,83 @@ export default function App() {
     anios: [],
   });
 
-  const [token, setToken] = useState(() => localStorage.getItem(STORAGE_TOKEN_KEY) || '');
-  const [usuario, setUsuario] = useState(() => localStorage.getItem(STORAGE_USER_KEY) || '');
-
   useEffect(() => {
     setAuthToken(token);
   }, [token]);
 
   useEffect(() => {
+    if (!token || superusuarioVerificado) {
+      return;
+    }
+
+    let cancelado = false;
+    validarTokenSuperusuario(token)
+      .then((response) => {
+        if (cancelado) return;
+        if (response.data?.es_superusuario) {
+          setUsuario(response.data.usuario);
+          setSuperusuarioVerificado(true);
+        } else {
+          localStorage.removeItem(STORAGE_TOKEN_KEY);
+          localStorage.removeItem(STORAGE_USER_KEY);
+          setAuthToken('');
+          setToken('');
+          setUsuario('');
+          setSuperusuarioVerificado(false);
+        }
+      })
+      .catch(() => {
+        if (cancelado) return;
+        localStorage.removeItem(STORAGE_TOKEN_KEY);
+        localStorage.removeItem(STORAGE_USER_KEY);
+        setAuthToken('');
+        setToken('');
+        setUsuario('');
+        setSuperusuarioVerificado(false);
+      })
+      .finally(() => {
+        if (!cancelado) setVerificandoSesion(false);
+      });
+
+    return () => {
+      cancelado = true;
+    };
+  }, [token, superusuarioVerificado]);
+
+  useEffect(() => {
+    if (!superusuarioVerificado) return;
+
+    let cancelado = false;
     api
       .get('api/filtros/')
-      .then((response) => setOpcionesFiltros(response.data))
+      .then((response) => {
+        if (!cancelado) setOpcionesFiltros(response.data);
+      })
       .catch((err) => console.error('Error al cargar opciones de filtros:', err));
-  }, []);
 
-  const manejarLoginExitoso = (nuevoToken, nombreUsuario) => {
+    return () => {
+      cancelado = true;
+    };
+  }, [superusuarioVerificado]);
+
+  const manejarAccesoAutorizado = (nuevoToken, nombreUsuario) => {
     localStorage.setItem(STORAGE_TOKEN_KEY, nuevoToken);
     localStorage.setItem(STORAGE_USER_KEY, nombreUsuario);
     setAuthToken(nuevoToken);
     setToken(nuevoToken);
     setUsuario(nombreUsuario);
+    setSuperusuarioVerificado(true);
+    setVerificandoSesion(false);
   };
 
-  const manejarLogout = () => {
+  const manejarCerrarSesion = () => {
     localStorage.removeItem(STORAGE_TOKEN_KEY);
     localStorage.removeItem(STORAGE_USER_KEY);
     setAuthToken('');
     setToken('');
     setUsuario('');
+    setSuperusuarioVerificado(false);
+    setVerificandoSesion(false);
   };
 
   const descargarPDF = async (filtros = {}) => {
@@ -67,6 +122,21 @@ export default function App() {
     }
   };
 
+  if (verificandoSesion) {
+    return (
+      <div className="pantalla-acceso-superusuario">
+        <div className="tarjeta-acceso-superusuario tarjeta-verificacion-sesion">
+          <div className="barra-superior-acceso" />
+          <p className="texto-verificando">Validando token de superusuario...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!superusuarioVerificado) {
+    return <AccesoSuperusuario onAccesoAutorizado={manejarAccesoAutorizado} />;
+  }
+
   return (
     <div className="contenedor-app">
       <header className="encabezado-superior">
@@ -75,7 +145,7 @@ export default function App() {
             <span className="insignia-marca">Sistema de Auditoría Farmacéutica</span>
             <h1>Panel de Precios y Compras de Medicamentos</h1>
             <p className="subtitulo-marca">
-              Conectado a <code>{API_BASE_URL}</code>
+              Conectado a <code>{API_BASE_URL}</code> · Superusuario activo: <strong>{usuario}</strong>
             </p>
           </div>
 
@@ -83,11 +153,12 @@ export default function App() {
             <nav className="navegacion-rapida" aria-label="Secciones del panel">
               <a href="#exploracion">Exploración</a>
               <a href="#estadisticas">Estadísticas</a>
-              <a href="#autenticacion">Autenticación</a>
-              <a href="#superusuario">Superusuario</a>
             </nav>
             <button type="button" className="boton boton-primario" onClick={() => descargarPDF()}>
               Descargar PDF Auditoría
+            </button>
+            <button type="button" className="boton boton-cerrar-sesion" onClick={manejarCerrarSesion}>
+              Cerrar sesión
             </button>
           </div>
         </div>
@@ -100,15 +171,6 @@ export default function App() {
         />
 
         <TableroEstadisticas opcionesFiltros={opcionesFiltros} />
-
-        <PanelAutenticacion
-          token={token}
-          usuario={usuario}
-          onLoginSuccess={manejarLoginExitoso}
-          onLogout={manejarLogout}
-        />
-
-        <AccesoSuperusuario />
       </main>
 
       <footer className="pie-pagina">
