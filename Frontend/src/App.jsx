@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from './api';
 import './App.css';
+import axios from 'axios';
 
 function App() {
   const [medicamentos, setMedicamentos] = useState([]);
@@ -9,7 +10,6 @@ function App() {
   const [siguientePagina, setSiguientePagina] = useState(null);
   const [anteriorPagina, setAnteriorPagina] = useState(null);
 
-  // Declaracion tradicional para evitar problemas de orden
   function cargarMedicamentos(url = 'api/medicamentos/') {
     api.get(url)
       .then(response => {
@@ -41,12 +41,29 @@ function App() {
     }
   };
 
+  const descargarPDF = async () => {
+    try {
+      const response = await axios.get('https://precio-compras-medicamentos.onrender.com/api/exportar-pdf/', {
+        responseType: 'blob',
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'reporte_auditoria.pdf');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      console.error("Error al descargar el PDF:", error);
+    }
+  };
+
   return (
     <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
       <h1>Panel de precios</h1> 
       <h1>y compra de medicamentos</h1>
 
-      {/* Seccion de Estadisticas Analiticas (Agregaciones del ORM) */}
       {estadisticas && (
         <div style={{ background: '#f4f4f4', padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
           <h3>Resumen Estadistico (Calculado en Base de Datos)</h3>
@@ -56,7 +73,6 @@ function App() {
         </div>
       )}
 
-      {/* Buscador por texto libre */}
       <form onSubmit={manejarBusqueda} style={{ marginBottom: '20px' }}>
         <input 
           type="text" 
@@ -68,7 +84,6 @@ function App() {
         <button type="submit" style={{ padding: '8px 15px' }}>Buscar</button>
       </form>
 
-      {/* Tabla de Registros Paginados */}
       <table border="1" cellPadding="10" style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px' }}>
         <thead>
           <tr style={{ background: '#b2c593' }}>
@@ -96,7 +111,6 @@ function App() {
         </tbody>
       </table>
 
-      {/* Controles de Paginacion */}
       <div style={{ marginBottom: '30px' }}>
         {anteriorPagina && (
           <button onClick={() => cargarMedicamentos(anteriorPagina.replace('https://precio-compras-medicamentos.onrender.com/', ''))} style={{ marginRight: '10px' }}>
@@ -110,17 +124,15 @@ function App() {
         )}
       </div>
 
-      {/* Boton para descargar el PDF de auditoria */}
       <div style={{ marginBottom: '20px' }}>
         <button 
-          onClick={() => window.open('https://precio-medicamentos-frontend.onrender.com/api/exportar-pdf/', '_blank')}
+          onClick={descargarPDF}
           style={{ padding: '10px 15px', background: '#007bff', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}
         >
           Descargar Reporte PDF de Auditoria
         </button>
       </div>
 
-      {/* Apartado con tus datos institucionales y personales */}
       <footer style={{ marginTop: '40px', padding: '15px', background: '#eaeaea', textAlign: 'center', borderRadius: '5px' }}>
         <p><strong>Proyecto desarrollado por:</strong> Johan Salazar Lopez</p>
         <p><strong>Programa:</strong> Tecnologo en Analisis y Desarrollo de Software (ADSO) - SENA (Ficha 3171062)</p>
