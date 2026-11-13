@@ -113,7 +113,7 @@ function App() {
       {/* Boton para descargar el PDF de auditoria */}
       <div style={{ marginBottom: '20px' }}>
         <button 
-          onClick={() => window.open('http://127.0.0.1:8000/api/exportar-pdf/', '_blank')}
+          onClick={() => window.open('https://precio-medicamentos-frontend.onrender.com/api/exportar-pdf/', '_blank')}
           style={{ padding: '10px 15px', background: '#007bff', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}
         >
           Descargar Reporte PDF de Auditoria
