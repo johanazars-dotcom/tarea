@@ -89,13 +89,13 @@ export default function TableroEstadisticas({ opcionesFiltros, recargaDatos = 0 
   const maxVolumen = Math.max(1, ...distribucion.map((item) => Number(item.volumen_total || 0)));
 
   return (
-    <section id="estadisticas" className="tarjeta-panel">
+    <div id="estadisticas" className="bloque-modulo">
       <div className="encabezado-panel">
         <div>
-          <span className="etiqueta-seccion">Análisis del segmento</span>
-          <h2>Tablero de Estadísticas Dinámicas y Manipulables</h2>
+          <span className="etiqueta-seccion">Análisis institucional del segmento</span>
+          <h2>Estadísticas de Precios y Volumen Comprado</h2>
           <p className="subtitulo-panel">
-            Cada filtro envía una petición al backend para recalcular totales, promedios, máximos y distribución agrupada exactamente sobre el segmento seleccionado.
+            Selecciona una forma farmacéutica, año, entidad o laboratorio para recalcular en el servidor los promedios, precios máximos y totales.
           </p>
         </div>
         {haySegmentoActivo && (
@@ -303,6 +303,6 @@ export default function TableroEstadisticas({ opcionesFiltros, recargaDatos = 0 
           )}
         </div>
       </div>
-    </section>
+    </div>
   );
 }

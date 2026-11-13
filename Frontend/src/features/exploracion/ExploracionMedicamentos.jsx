@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../../shared/api';
 import { formatearMoneda, formatearNumero } from '../../shared/formateadores';
+import { IconoBusquedaMedica, IconoDocumentoPDF, IconoMedicamento } from '../../shared/IconosSalud';
 
 const CAMPOS_ORDEN = [
   { value: 'fecha_reporte', label: 'Fecha de reporte' },
@@ -199,13 +200,13 @@ export default function ExploracionMedicamentos({
   };
 
   return (
-    <section id="exploracion" className="tarjeta-panel">
+    <div id="exploracion" className="bloque-modulo">
       <div className="encabezado-panel">
         <div>
           <span className="etiqueta-seccion">Consulta de registros</span>
-          <h2>Exploración Paginada y Controles de Consulta</h2>
+          <h2>Exploración de Precios y Compras de Medicamentos</h2>
           <p className="subtitulo-panel">
-            Navegación por páginas, búsqueda textual, filtros por categoría y ordenamiento sincronizados en tiempo real con <code>GET /api/medicamentos/</code>.
+            Busca por medicamento, laboratorio o entidad compradora, aplica filtros por categoría y ordena la tabla en tiempo real.
           </p>
         </div>
         <div className="acciones-encabezado-panel">
@@ -215,6 +216,7 @@ export default function ExploracionMedicamentos({
             onClick={generarLoteMedicamentos}
             disabled={importando}
           >
+            <IconoMedicamento size={17} />
             {importando ? 'Generando...' : 'Generar lote de medicamentos'}
           </button>
           {onExportarPdf && (
@@ -223,6 +225,7 @@ export default function ExploracionMedicamentos({
               className="boton boton-secundario"
               onClick={() => onExportarPdf(construirParams(1))}
             >
+              <IconoDocumentoPDF size={17} />
               Exportar PDF filtrado
             </button>
           )}
@@ -240,6 +243,7 @@ export default function ExploracionMedicamentos({
             aria-label="Buscar medicamentos"
           />
           <button type="submit" className="boton boton-primario">
+            <IconoBusquedaMedica size={17} />
             Buscar
           </button>
           {hayFiltrosActivos && (
@@ -498,6 +502,6 @@ export default function ExploracionMedicamentos({
           Última »
         </button>
       </div>
-    </section>
+    </div>
   );
 }
