@@ -99,12 +99,12 @@ function App() {
       {/* Controles de Paginacion */}
       <div style={{ marginBottom: '30px' }}>
         {anteriorPagina && (
-          <button onClick={() => cargarMedicamentos(anteriorPagina.replace('http://127.0.0.1:8000/', ''))} style={{ marginRight: '10px' }}>
+          <button onClick={() => cargarMedicamentos(anteriorPagina.replace('https://precio-compras-medicamentos.onrender.com/', ''))} style={{ marginRight: '10px' }}>
             Anterior
           </button>
         )}
         {siguientePagina && (
-          <button onClick={() => cargarMedicamentos(siguientePagina.replace('http://127.0.0.1:8000/', ''))}>
+          <button onClick={() => cargarMedicamentos(siguientePagina.replace('https://precio-compras-medicamentos.onrender.com/', ''))}>
             Siguiente
           </button>
         )}
