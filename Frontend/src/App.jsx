@@ -93,7 +93,7 @@ function App() {
             <th style={{ color: 'AccentColorText'}}>Precio Unitario</th>
             <th style={{ color: 'AccentColorText'}}>Cantidad</th>
             <th style={{ color: 'AccentColorText'}}>Fecha</th>
-            <th>Entidad</th>
+            <th style={{ color: 'AccentColorText'}}>Entidad</th>
           </tr>
         </thead>
         <tbody>
