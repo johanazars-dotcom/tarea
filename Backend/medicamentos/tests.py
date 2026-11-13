@@ -12,6 +12,11 @@ from .models import ReporteMedicamento
 class PruebasAPIMedicamentos(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(username='auditor', password='PasswordSegura123!')
+        self.superuser = User.objects.create_superuser(
+            username='superadmin',
+            email='admin@example.com',
+            password='SuperPassword123!',
+        )
 
         registros = [
             ReporteMedicamento(
@@ -154,3 +159,28 @@ class PruebasAPIMedicamentos(APITestCase):
         self.assertEqual(res_ok.data['status'], 'success')
         self.assertEqual(res_ok.data['usuario'], 'auditor')
         self.assertEqual(res_ok.data['registros_actuales'], 15)
+
+    def test_validacion_token_superusuario(self):
+        validar_url = reverse('validar-superusuario')
+        login_url = reverse('api_token_auth')
+
+        # 1. Sin token -> 401 Unauthorized
+        res_sin_token = self.client.post(validar_url)
+        self.assertEqual(res_sin_token.status_code, status.HTTP_401_UNAUTHORIZED)
+
+        # 2. Usuario normal (no superusuario) -> 403 Forbidden
+        res_user = self.client.post(login_url, {'username': 'auditor', 'password': 'PasswordSegura123!'})
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {res_user.data['token']}")
+        res_forbidden = self.client.post(validar_url)
+        self.assertEqual(res_forbidden.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertFalse(res_forbidden.data['es_superusuario'])
+
+        # 3. Superusuario -> 200 OK y es_superusuario=True
+        self.client.credentials()
+        res_super_login = self.client.post(login_url, {'username': 'superadmin', 'password': 'SuperPassword123!'})
+        self.assertEqual(res_super_login.status_code, status.HTTP_200_OK)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {res_super_login.data['token']}")
+        res_validado = self.client.post(validar_url)
+        self.assertEqual(res_validado.status_code, status.HTTP_200_OK)
+        self.assertTrue(res_validado.data['es_superusuario'])
+        self.assertEqual(res_validado.data['usuario'], 'superadmin')

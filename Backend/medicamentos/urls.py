@@ -6,6 +6,7 @@ from .views import (
     OperacionProtegidaView,
     ReporteMedicamentoViewSet,
     VistaFiltrosDisponibles,
+    VistaValidacionSuperusuario,
 )
 
 router = DefaultRouter()
@@ -16,5 +17,6 @@ urlpatterns = [
     path('api/filtros/', VistaFiltrosDisponibles.as_view(), name='filtros-disponibles'),
     path('api/estadisticas/', EstadisticasMedicamentosView.as_view(), name='estadisticas-medicamentos'),
     path('api/operacion-protegida/', OperacionProtegidaView.as_view(), name='operacion-protegida'),
+    path('api/validar-superusuario/', VistaValidacionSuperusuario.as_view(), name='validar-superusuario'),
     path('api/exportar-pdf/', ExportarPDFView.as_view(), name='exportar_pdf'),
 ]

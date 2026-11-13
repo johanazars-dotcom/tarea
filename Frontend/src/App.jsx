@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import api, { API_BASE_URL, setAuthToken } from './api';
 import './App.css';
+import AccesoSuperusuario from './components/AccesoSuperusuario';
 import ExploracionMedicamentos from './components/ExploracionMedicamentos';
 import PanelAutenticacion from './components/PanelAutenticacion';
 import TableroEstadisticas from './components/TableroEstadisticas';
@@ -83,6 +84,7 @@ export default function App() {
               <a href="#exploracion">Exploración</a>
               <a href="#estadisticas">Estadísticas</a>
               <a href="#autenticacion">Autenticación</a>
+              <a href="#superusuario">Superusuario</a>
             </nav>
             <button type="button" className="boton boton-primario" onClick={() => descargarPDF()}>
               Descargar PDF Auditoría
@@ -105,6 +107,8 @@ export default function App() {
           onLoginSuccess={manejarLoginExitoso}
           onLogout={manejarLogout}
         />
+
+        <AccesoSuperusuario />
       </main>
 
       <footer className="pie-pagina">

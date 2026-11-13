@@ -27,4 +27,9 @@ export function postSinToken(endpoint, data = {}) {
   return axios.post(`${API_BASE_URL}${cleanEndpoint}`, data);
 }
 
+export function validarTokenSuperusuario(token) {
+  const headers = token ? { Authorization: `Token ${token}` } : {};
+  return axios.post(`${API_BASE_URL}api/validar-superusuario/`, {}, { headers });
+}
+
 export default api;

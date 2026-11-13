@@ -5,7 +5,7 @@ from django.http import HttpResponse
 from django.utils import timezone
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
-from rest_framework import filters, viewsets
+from rest_framework import filters, status, viewsets
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
@@ -183,6 +183,35 @@ class OperacionProtegidaView(APIView):
             'message': 'Operacion protegida ejecutada correctamente.',
             'usuario': request.user.username,
             'registros_actuales': total_registros,
+            'timestamp': timezone.now().isoformat(),
+        })
+
+
+class VistaValidacionSuperusuario(APIView):
+    """Valida que el token pertenezca a un usuario autenticado con rol de superusuario."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        usuario = request.user
+        if not usuario.is_superuser:
+            return Response(
+                {
+                    'status': 'forbidden',
+                    'es_superusuario': False,
+                    'usuario': usuario.username,
+                    'detail': 'El token es valido, pero la cuenta no tiene privilegios de superusuario.',
+                    'timestamp': timezone.now().isoformat(),
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        return Response({
+            'status': 'success',
+            'es_superusuario': True,
+            'usuario': usuario.username,
+            'es_staff': usuario.is_staff,
+            'message': 'Token de superusuario validado correctamente.',
             'timestamp': timezone.now().isoformat(),
         })
 
