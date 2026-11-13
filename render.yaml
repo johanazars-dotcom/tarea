@@ -29,17 +29,3 @@ services:
         sync: false
       - key: DJANGO_SUPERUSER_PASSWORD
         sync: false
-
-  - type: web
-    name: precio-compras-medicamentos-frontend
-    runtime: static
-    rootDir: Frontend
-    buildCommand: npm ci && npm run build
-    staticPublishPath: dist
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
-    envVars:
-      - key: VITE_API_URL
-        value: https://precio-compras-medicamentos.onrender.com/

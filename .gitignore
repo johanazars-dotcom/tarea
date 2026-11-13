@@ -1,7 +1,6 @@
 # Python / Django
 Backend/venv/
 Backend/staticfiles/
-Backend/static_frontend/
 .venv/
 __pycache__/
 *.pyc

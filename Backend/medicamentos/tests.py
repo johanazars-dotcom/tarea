@@ -226,3 +226,11 @@ class PruebasAPIMedicamentos(APITestCase):
         self.assertEqual(res_next.data['creados'], 5)
         self.assertEqual(res_next.data['total'], 25)
         self.assertTrue(ReporteMedicamento.objects.filter(codigo_reporte='MED-COL-000010').exists())
+
+    def test_sirve_frontend_compilado_sin_interferir_api(self):
+        res_home = self.client.get('/')
+        self.assertEqual(res_home.status_code, status.HTTP_200_OK)
+        self.assertIn(b'/static/assets/', res_home.content)
+
+        res_api_404 = self.client.get('/api/ruta-inexistente/')
+        self.assertEqual(res_api_404.status_code, status.HTTP_404_NOT_FOUND)
