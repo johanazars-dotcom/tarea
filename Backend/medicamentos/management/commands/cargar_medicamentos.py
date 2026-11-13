@@ -7,6 +7,10 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         ruta_csv = 'medicamentos.csv'
+        
+        # Limpiamos la tabla primero para evitar duplicados con registros vacios
+        ReporteMedicamento.objects.all().delete()
+        
         lotes = []
         contador = 0
 
@@ -18,9 +22,9 @@ class Command(BaseCommand):
                     laboratorio=fila.get('laboratorio', ''),
                     forma_farmaceutica=fila.get('forma_farmaceutica', ''),
                     precio_unitario=float(fila.get('precio_unitario', 0) or 0),
-                    cantidad_comprada=int(fila.get('cantidad_comprada', 0) or 0),
-                    fecha_reporte=fila.get('fecha_reporte', '2026-01-01'),
-                    entidad_compradora=fila.get('entidad_compradora', '')
+                    cantidad_comprada=int(fila.get('cantidad', 0) or 0),
+                    fecha_reporte=fila.get('fecha', '2026-01-01'),
+                    entidad_compradora=fila.get('entidad', '')
                 ))
                 contador += 1
 
