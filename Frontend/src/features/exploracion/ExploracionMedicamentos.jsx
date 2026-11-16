@@ -1,7 +1,27 @@
 import { useEffect, useState } from 'react';
 import api from '../../shared/api';
 import { formatearMoneda, formatearNumero } from '../../shared/formateadores';
-import { IconoBusquedaMedica, IconoDocumentoPDF, IconoMedicamento } from '../../shared/IconosSalud';
+import {
+  IconoBusquedaMedica,
+  IconoDocumentoPDF,
+  IconoEditar,
+  IconoEliminar,
+  IconoMas,
+  IconoMedicamento,
+  IconoVenta,
+} from '../../shared/IconosSalud';
+
+function crearFormularioVacio() {
+  return {
+    principio_activo: '',
+    laboratorio: '',
+    forma_farmaceutica: '',
+    precio_unitario: '',
+    cantidad_comprada: '',
+    fecha_reporte: new Date().toISOString().slice(0, 10),
+    entidad_compradora: '',
+  };
+}
 
 const CAMPOS_ORDEN = [
   { value: 'fecha_reporte', label: 'Fecha de reporte' },
@@ -34,6 +54,7 @@ export default function ExploracionMedicamentos({
   onExportarPdf,
   recargaDatos = 0,
   onDatosImportados,
+  onVenderMedicamento,
 }) {
   const [medicamentos, setMedicamentos] = useState([]);
   const [totalRegistros, setTotalRegistros] = useState(0);
@@ -43,6 +64,13 @@ export default function ExploracionMedicamentos({
   const [pageSize, setPageSize] = useState(10);
   const [importando, setImportando] = useState(false);
   const [estadoImportacion, setEstadoImportacion] = useState(null);
+
+  const [modoCrud, setModoCrud] = useState(null);
+  const [idEditando, setIdEditando] = useState(null);
+  const [formularioCrud, setFormularioCrud] = useState(() => crearFormularioVacio());
+  const [guardandoCrud, setGuardandoCrud] = useState(false);
+  const [idConfirmandoEliminar, setIdConfirmandoEliminar] = useState(null);
+  const [eliminandoId, setEliminandoId] = useState(null);
 
   const [textoInput, setTextoInput] = useState('');
   const [busqueda, setBusqueda] = useState('');
@@ -151,6 +179,106 @@ export default function ExploracionMedicamentos({
     }
   };
 
+  const abrirCrearMedicamento = () => {
+    setModoCrud('crear');
+    setIdEditando(null);
+    setFormularioCrud(crearFormularioVacio());
+    setEstadoImportacion(null);
+  };
+
+  const abrirEditarMedicamento = (item) => {
+    setModoCrud('editar');
+    setIdEditando(item.id);
+    setFormularioCrud({
+      principio_activo: item.principio_activo || '',
+      laboratorio: item.laboratorio || '',
+      forma_farmaceutica: item.forma_farmaceutica || '',
+      precio_unitario: String(item.precio_unitario ?? ''),
+      cantidad_comprada: String(item.cantidad_comprada ?? ''),
+      fecha_reporte: item.fecha_reporte || '',
+      entidad_compradora: item.entidad_compradora || '',
+    });
+    setEstadoImportacion(null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const cerrarFormularioCrud = () => {
+    setModoCrud(null);
+    setIdEditando(null);
+    setFormularioCrud(crearFormularioVacio());
+  };
+
+  const cambiarCampoCrud = (campo) => (e) => {
+    setFormularioCrud((prev) => ({ ...prev, [campo]: e.target.value }));
+  };
+
+  const manejarGuardarCrud = async (e) => {
+    e.preventDefault();
+    setGuardandoCrud(true);
+    setEstadoImportacion(null);
+    const payload = {
+      principio_activo: formularioCrud.principio_activo.trim().toUpperCase(),
+      laboratorio: formularioCrud.laboratorio.trim().toUpperCase(),
+      forma_farmaceutica: formularioCrud.forma_farmaceutica.trim().toUpperCase(),
+      precio_unitario: formularioCrud.precio_unitario,
+      cantidad_comprada: Number(formularioCrud.cantidad_comprada),
+      fecha_reporte: formularioCrud.fecha_reporte,
+      entidad_compradora: formularioCrud.entidad_compradora.trim().toUpperCase(),
+    };
+
+    try {
+      if (modoCrud === 'editar' && idEditando) {
+        await api.patch(`api/medicamentos/${idEditando}/`, payload);
+        setEstadoImportacion({
+          tipo: 'exito',
+          texto: `Medicamento "${payload.principio_activo}" actualizado correctamente.`,
+        });
+      } else {
+        await api.post('api/medicamentos/', payload);
+        setEstadoImportacion({
+          tipo: 'exito',
+          texto: `Medicamento "${payload.principio_activo}" registrado en el inventario.`,
+        });
+        setPagina(1);
+      }
+      cerrarFormularioCrud();
+      onDatosImportados?.();
+    } catch (err) {
+      const detalleError =
+        err.response?.data?.precio_unitario?.[0] ||
+        err.response?.data?.cantidad_comprada?.[0] ||
+        err.response?.data?.detail ||
+        'Revisa los campos ingresados antes de guardar.';
+      setEstadoImportacion({ tipo: 'error', texto: detalleError });
+    } finally {
+      setGuardandoCrud(false);
+    }
+  };
+
+  const confirmarEliminarMedicamento = async (item) => {
+    setEliminandoId(item.id);
+    setEstadoImportacion(null);
+    try {
+      await api.delete(`api/medicamentos/${item.id}/`);
+      setIdConfirmandoEliminar(null);
+      setEstadoImportacion({
+        tipo: 'exito',
+        texto: `Registro "${item.principio_activo}" eliminado del inventario.`,
+      });
+      if (medicamentos.length === 1 && pagina > 1) {
+        setPagina((p) => p - 1);
+      }
+      onDatosImportados?.();
+    } catch (err) {
+      setEstadoImportacion({
+        tipo: 'error',
+        texto: err.response?.data?.detail || 'No se pudo eliminar el registro.',
+      });
+    } finally {
+      setEliminandoId(null);
+    }
+  };
+
   const manejarSubmitBusqueda = (e) => {
     e.preventDefault();
     setPagina(1);
@@ -213,11 +341,19 @@ export default function ExploracionMedicamentos({
           <button
             type="button"
             className="boton boton-primario"
+            onClick={modoCrud === 'crear' ? cerrarFormularioCrud : abrirCrearMedicamento}
+          >
+            <IconoMas size={17} />
+            {modoCrud === 'crear' ? 'Cerrar formulario' : 'Registrar medicamento'}
+          </button>
+          <button
+            type="button"
+            className="boton boton-secundario"
             onClick={generarLoteMedicamentos}
             disabled={importando}
           >
             <IconoMedicamento size={17} />
-            {importando ? 'Generando...' : 'Generar lote de medicamentos'}
+            {importando ? 'Generando...' : 'Generar lote'}
           </button>
           {onExportarPdf && (
             <button
@@ -231,6 +367,137 @@ export default function ExploracionMedicamentos({
           )}
         </div>
       </div>
+
+      {modoCrud && (
+        <form onSubmit={manejarGuardarCrud} className="panel-crud-medicamento">
+          <div className="cabecera-crud-medicamento">
+            <h3>
+              {modoCrud === 'editar'
+                ? 'Editar medicamento registrado'
+                : 'Registrar nuevo medicamento en PostgreSQL'}
+            </h3>
+            <button type="button" className="boton boton-fantasma" onClick={cerrarFormularioCrud}>
+              Cancelar
+            </button>
+          </div>
+
+          <div className="grilla-crud-campos">
+            <label className="grupo-campo">
+              <span>Principio activo y concentración</span>
+              <input
+                type="text"
+                className="control-entrada"
+                value={formularioCrud.principio_activo}
+                onChange={cambiarCampoCrud('principio_activo')}
+                placeholder="Ej. IBUPROFENO 400 MG"
+                required
+              />
+            </label>
+
+            <label className="grupo-campo">
+              <span>Laboratorio</span>
+              <input
+                type="text"
+                list="lista-laboratorios-crud"
+                className="control-entrada"
+                value={formularioCrud.laboratorio}
+                onChange={cambiarCampoCrud('laboratorio')}
+                placeholder="Ej. GENFAR S.A."
+                required
+              />
+              <datalist id="lista-laboratorios-crud">
+                {(opcionesFiltros.laboratorios || []).map((lab) => (
+                  <option key={lab} value={lab} />
+                ))}
+              </datalist>
+            </label>
+
+            <label className="grupo-campo">
+              <span>Forma farmacéutica</span>
+              <input
+                type="text"
+                list="lista-formas-crud"
+                className="control-entrada"
+                value={formularioCrud.forma_farmaceutica}
+                onChange={cambiarCampoCrud('forma_farmaceutica')}
+                placeholder="Ej. TABLETA"
+                required
+              />
+              <datalist id="lista-formas-crud">
+                {(opcionesFiltros.formas_farmaceuticas || []).map((forma) => (
+                  <option key={forma} value={forma} />
+                ))}
+              </datalist>
+            </label>
+
+            <label className="grupo-campo">
+              <span>Precio unitario (COP)</span>
+              <input
+                type="number"
+                step="0.01"
+                min="0.01"
+                className="control-entrada"
+                value={formularioCrud.precio_unitario}
+                onChange={cambiarCampoCrud('precio_unitario')}
+                placeholder="Ej. 850.00"
+                required
+              />
+            </label>
+
+            <label className="grupo-campo">
+              <span>Cantidad en inventario</span>
+              <input
+                type="number"
+                min="0"
+                className="control-entrada"
+                value={formularioCrud.cantidad_comprada}
+                onChange={cambiarCampoCrud('cantidad_comprada')}
+                placeholder="Ej. 500"
+                required
+              />
+            </label>
+
+            <label className="grupo-campo">
+              <span>Fecha de reporte</span>
+              <input
+                type="date"
+                className="control-entrada"
+                value={formularioCrud.fecha_reporte}
+                onChange={cambiarCampoCrud('fecha_reporte')}
+                required
+              />
+            </label>
+
+            <label className="grupo-campo campo-crud-ancho">
+              <span>Entidad compradora</span>
+              <input
+                type="text"
+                list="lista-entidades-crud"
+                className="control-entrada"
+                value={formularioCrud.entidad_compradora}
+                onChange={cambiarCampoCrud('entidad_compradora')}
+                placeholder="Ej. ESE HOSPITAL SAN JOSÉ DE SOGAMOSO"
+                required
+              />
+              <datalist id="lista-entidades-crud">
+                {(opcionesFiltros.entidades_compradoras || []).map((entidad) => (
+                  <option key={entidad} value={entidad} />
+                ))}
+              </datalist>
+            </label>
+          </div>
+
+          <div className="acciones-crud-pie">
+            <button type="submit" className="boton boton-primario" disabled={guardandoCrud}>
+              {guardandoCrud
+                ? 'Guardando...'
+                : modoCrud === 'editar'
+                  ? 'Guardar cambios'
+                  : 'Guardar medicamento'}
+            </button>
+          </div>
+        </form>
+      )}
 
       <form onSubmit={manejarSubmitBusqueda} className="fila-busqueda">
         <div className="grupo-entrada-busqueda">
@@ -419,12 +686,13 @@ export default function ExploracionMedicamentos({
                   Entidad Compradora <span>{indicadorOrden('entidad_compradora')}</span>
                 </button>
               </th>
+              <th className="columna-acciones">Acciones</th>
             </tr>
           </thead>
           <tbody>
             {!cargando && medicamentos.length === 0 ? (
               <tr>
-                <td colSpan="7" className="celda-estado-vacio">
+                <td colSpan="8" className="celda-estado-vacio">
                   No se encontraron registros que coincidan con los criterios seleccionados.
                 </td>
               </tr>
@@ -437,9 +705,69 @@ export default function ExploracionMedicamentos({
                     <span className="insignia-categoria">{item.forma_farmaceutica}</span>
                   </td>
                   <td className="columna-numerica numero-monoespaciado">{formatearMoneda(item.precio_unitario)}</td>
-                  <td className="columna-numerica numero-monoespaciado">{formatearNumero(item.cantidad_comprada)}</td>
+                  <td className="columna-numerica numero-monoespaciado">
+                    {item.cantidad_comprada <= 0 ? (
+                      <span className="insignia-agotado">Agotado (0)</span>
+                    ) : (
+                      formatearNumero(item.cantidad_comprada)
+                    )}
+                  </td>
                   <td className="numero-monoespaciado">{item.fecha_reporte}</td>
                   <td>{item.entidad_compradora}</td>
+                  <td className="columna-acciones">
+                    {idConfirmandoEliminar === item.id ? (
+                      <div className="grupo-acciones-fila">
+                        <button
+                          type="button"
+                          className="boton-accion-tabla boton-accion-peligro"
+                          disabled={eliminandoId === item.id}
+                          onClick={() => confirmarEliminarMedicamento(item)}
+                        >
+                          {eliminandoId === item.id ? 'Borrando...' : 'Sí, borrar'}
+                        </button>
+                        <button
+                          type="button"
+                          className="boton-accion-tabla"
+                          onClick={() => setIdConfirmandoEliminar(null)}
+                        >
+                          No
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="grupo-acciones-fila">
+                        {onVenderMedicamento && (
+                          <button
+                            type="button"
+                            className="boton-accion-tabla boton-accion-vender"
+                            disabled={item.cantidad_comprada <= 0}
+                            onClick={() => onVenderMedicamento(item)}
+                            title={item.cantidad_comprada <= 0 ? 'Sin stock disponible' : 'Vender este medicamento'}
+                          >
+                            <IconoVenta size={14} />
+                            Vender
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className="boton-accion-tabla"
+                          onClick={() => abrirEditarMedicamento(item)}
+                          title="Editar medicamento"
+                        >
+                          <IconoEditar size={14} />
+                          Editar
+                        </button>
+                        <button
+                          type="button"
+                          className="boton-accion-tabla boton-accion-peligro"
+                          onClick={() => setIdConfirmandoEliminar(item.id)}
+                          title="Eliminar medicamento"
+                        >
+                          <IconoEliminar size={14} />
+                          Eliminar
+                        </button>
+                      </div>
+                    )}
+                  </td>
                 </tr>
               ))
             )}

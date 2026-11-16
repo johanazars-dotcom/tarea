@@ -156,6 +156,15 @@ select:focus-visible {
   text-decoration: none;
 }
 
+.identidad-boton {
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+}
+
 .emblema-cruz-salud {
   width: 44px;
   height: 44px;
@@ -194,19 +203,32 @@ select:focus-visible {
   gap: 4px;
 }
 
-.navegacion-hospital a {
+.navegacion-hospital a,
+.enlace-nav-pagina {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-family: inherit;
   text-decoration: none;
-  font-size: 15px;
+  font-size: 14.5px;
   font-weight: 600;
   color: var(--texto-secundario);
-  padding: 8px 13px;
-  border-radius: var(--radio-sm);
-  transition: background-color 0.16s ease, color 0.16s ease;
+  padding: 8px 12px;
+  border-radius: var(--radio-sm) var(--radio-sm) 0 0;
+  cursor: pointer;
+  transition: background-color 0.16s ease, color 0.16s ease, border-color 0.16s ease;
 }
 
-.navegacion-hospital a:hover {
+.navegacion-hospital a:hover,
+.enlace-nav-pagina:hover {
   background: var(--gris-claro);
   color: var(--azul-institucional);
+}
+
+.enlace-nav-activo {
+  color: var(--azul-institucional);
+  background: var(--azul-suave);
+  border-bottom-color: var(--azul-institucional);
 }
 
 .acciones-encabezado {
@@ -1340,6 +1362,248 @@ select:focus-visible {
 }
 
 /* Diseño responsive */
+.banda-pagina-unica {
+  min-height: 62vh;
+  padding-top: 38px;
+  padding-bottom: 52px;
+}
+
+.pie-boton-enlace {
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  font-family: inherit;
+  font-size: 14px;
+  color: #dbe6ee;
+  cursor: pointer;
+}
+
+.pie-boton-enlace:hover {
+  color: #ffffff;
+  text-decoration: underline;
+}
+
+/* Formulario CRUD de medicamentos */
+.panel-crud-medicamento {
+  background: var(--blanco-calido);
+  border: 1px solid var(--azul-borde);
+  border-radius: var(--radio-md);
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.cabecera-crud-medicamento {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--gris-borde);
+}
+
+.cabecera-crud-medicamento h3 {
+  font-family: var(--fuente-titulos);
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--azul-oscuro);
+}
+
+.grilla-crud-campos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px 16px;
+}
+
+.campo-crud-ancho {
+  grid-column: span 2;
+}
+
+.acciones-crud-pie {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Acciones por fila y estado de inventario */
+.columna-acciones {
+  white-space: nowrap;
+  text-align: right;
+}
+
+.grupo-acciones-fila {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.boton-accion-tabla {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--azul-institucional);
+  background: var(--superficie);
+  border: 1px solid var(--gris-borde-fuerte);
+  border-radius: var(--radio-sm);
+  cursor: pointer;
+  transition: background-color 0.14s ease, border-color 0.14s ease;
+}
+
+.boton-accion-tabla:hover:not(:disabled) {
+  background: var(--gris-claro);
+  border-color: var(--azul-institucional);
+}
+
+.boton-accion-tabla:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.boton-accion-vender {
+  background: var(--teal-suave);
+  color: var(--teal-hover);
+  border-color: var(--teal-borde);
+}
+
+.boton-accion-vender:hover:not(:disabled) {
+  background: #d9ecea;
+  border-color: var(--teal-salud);
+}
+
+.boton-accion-peligro {
+  color: var(--error-texto);
+  border-color: var(--error-borde);
+  background: var(--error-fondo);
+}
+
+.boton-accion-peligro:hover:not(:disabled) {
+  background: #f8dfdd;
+  border-color: var(--error-texto);
+}
+
+.insignia-agotado {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--error-texto);
+  background: var(--error-fondo);
+  border: 1px solid var(--error-borde);
+  border-radius: var(--radio-sm);
+}
+
+/* Punto de Venta y Historial */
+.grilla-ventas {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  gap: 28px;
+  align-items: start;
+}
+
+.panel-formulario-venta,
+.panel-historial-ventas {
+  background: var(--blanco-calido);
+  border: 1px solid var(--gris-borde);
+  border-radius: var(--radio-md);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.panel-formulario-venta h3,
+.cabecera-historial-ventas h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--fuente-titulos);
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--azul-oscuro);
+}
+
+.resumen-stock-venta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 14px;
+  background: var(--superficie);
+  border: 1px solid var(--gris-borde);
+  border-radius: var(--radio-sm);
+}
+
+.resumen-stock-venta span,
+.resumen-total-venta span {
+  display: block;
+  font-size: 12px;
+  color: var(--texto-suave);
+}
+
+.resumen-stock-venta strong {
+  font-size: 14.5px;
+  color: var(--texto-principal);
+}
+
+.texto-disponible {
+  color: var(--teal-hover) !important;
+}
+
+.texto-agotado {
+  color: var(--error-texto) !important;
+}
+
+.fila-campos-doble {
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr);
+  gap: 14px;
+}
+
+.resumen-total-venta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px;
+  background: var(--azul-suave);
+  border: 1px solid var(--azul-borde);
+  border-radius: var(--radio-md);
+}
+
+.resumen-total-venta strong {
+  font-family: var(--fuente-titulos);
+  font-size: 1.3rem;
+  color: var(--azul-oscuro);
+}
+
+.cabecera-historial-ventas {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.buscador-compacto {
+  display: flex;
+  gap: 8px;
+}
+
+.buscador-compacto .control-entrada {
+  min-width: 200px;
+}
+
+.subtexto-tabla {
+  font-size: 12.5px;
+  color: var(--texto-suave);
+}
+
 @media (max-width: 1020px) {
   .rejilla-accesos-rapidos {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1348,6 +1612,7 @@ select:focus-visible {
   .hero-hospital-grid,
   .institucional-grid,
   .division-estadisticas,
+  .grilla-ventas,
   .contenedor-acceso-hospitalario,
   .pie-pagina-interno {
     grid-template-columns: 1fr;
@@ -1385,8 +1650,14 @@ select:focus-visible {
   }
 
   .rejilla-accesos-rapidos,
-  .lista-cobertura-real {
+  .lista-cobertura-real,
+  .resumen-stock-venta,
+  .fila-campos-doble {
     grid-template-columns: 1fr;
+  }
+
+  .campo-crud-ancho {
+    grid-column: span 1;
   }
 
   .panel-presentacion-acceso,

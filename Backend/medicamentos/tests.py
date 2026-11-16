@@ -234,3 +234,70 @@ class PruebasAPIMedicamentos(APITestCase):
 
         res_api_404 = self.client.get('/api/ruta-inexistente/')
         self.assertEqual(res_api_404.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_crud_medicamentos_y_venta_con_descuento_stock(self):
+        login_url = reverse('api_token_auth')
+        med_list_url = reverse('reportemedicamento-list')
+        ventas_url = reverse('ventas-medicamentos')
+
+        res_login = self.client.post(login_url, {'username': 'superadmin', 'password': 'SuperPassword123!'})
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {res_login.data['token']}")
+
+        # 1. Crear medicamento propio -> 201
+        res_crear = self.client.post(
+            med_list_url,
+            {
+                'principio_activo': 'NAPROXENO 500 MG',
+                'laboratorio': 'GENFAR S.A.',
+                'forma_farmaceutica': 'TABLETA',
+                'precio_unitario': '1500.00',
+                'cantidad_comprada': 50,
+                'fecha_reporte': '2026-11-10',
+                'entidad_compradora': 'HOSPITAL CENTRAL',
+            },
+            format='json',
+        )
+        self.assertEqual(res_crear.status_code, status.HTTP_201_CREATED)
+        med_id = res_crear.data['id']
+
+        # 2. Actualizar precio -> 200
+        detail_url = reverse('reportemedicamento-detail', args=[med_id])
+        res_editar = self.client.patch(detail_url, {'precio_unitario': '1800.00'}, format='json')
+        self.assertEqual(res_editar.status_code, status.HTTP_200_OK)
+        self.assertEqual(res_editar.data['precio_unitario'], '1800.00')
+
+        # 3. Registrar venta de 12 unidades -> descuenta stock a 38
+        res_venta = self.client.post(
+            ventas_url,
+            {
+                'medicamento_id': med_id,
+                'cantidad': 12,
+                'comprador': 'MARIA GOMEZ',
+                'observacion': 'Formula externa',
+            },
+            format='json',
+        )
+        self.assertEqual(res_venta.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(res_venta.data['stock_restante'], 38)
+        self.assertEqual(res_venta.data['venta']['total_venta'], '21600.00')
+
+        med_actualizado = ReporteMedicamento.objects.get(pk=med_id)
+        self.assertEqual(med_actualizado.cantidad_comprada, 38)
+
+        # 4. Venta mayor al stock disponible -> 400 Bad Request
+        res_exceso = self.client.post(
+            ventas_url,
+            {'medicamento_id': med_id, 'cantidad': 50, 'comprador': 'CLINICA NORTE'},
+            format='json',
+        )
+        self.assertEqual(res_exceso.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # 5. Listado paginado de ventas -> 200
+        res_historial = self.client.get(ventas_url)
+        self.assertEqual(res_historial.status_code, status.HTTP_200_OK)
+        self.assertEqual(res_historial.data['count'], 1)
+
+        # 6. Eliminar medicamento -> 204
+        res_eliminar = self.client.delete(detail_url)
+        self.assertEqual(res_eliminar.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(ReporteMedicamento.objects.filter(pk=med_id).exists())

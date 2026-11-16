@@ -1,5 +1,6 @@
 from decimal import Decimal
 import time
+from django.db import transaction
 from django.db.models import Avg, Count, DecimalField, F, Max, Min, Q, Sum
 from django.db.models.functions import ExtractYear
 from django.http import HttpResponse
@@ -12,9 +13,13 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .fuente_datos import TAMANO_PAGINA, consultar_pagina, fila_a_medicamento
-from .models import ReporteMedicamento
+from .models import ReporteMedicamento, VentaMedicamento
 from .paginacion import PaginacionMedicamentos
-from .serializers import ReporteMedicamentoSerializer
+from .serializers import (
+    RegistrarVentaSerializer,
+    ReporteMedicamentoSerializer,
+    VentaMedicamentoSerializer,
+)
 
 
 def _aplicar_filtros_medicamentos(queryset, params, incluir_search=False):
@@ -38,6 +43,9 @@ def _aplicar_filtros_medicamentos(queryset, params, incluir_search=False):
             queryset = queryset.filter(fecha_reporte__year=int(anio))
         except ValueError:
             queryset = queryset.none()
+
+    if (params.get('solo_disponibles') or '').strip().lower() in ('1', 'true', 'si'):
+        queryset = queryset.filter(cantidad_comprada__gt=0)
 
     if incluir_search:
         search = (params.get('search') or '').strip()
@@ -321,3 +329,78 @@ class VistaInyeccionMasiva(APIView):
                 {'detalle': f'Error generando lote de medicamentos: {exc}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+
+class VistaVentasMedicamentos(APIView):
+    """Lista ventas registradas y procesa ventas descontando stock del inventario."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        ventas = VentaMedicamento.objects.all().order_by('-fecha_venta', '-id')
+        search = (request.query_params.get('search') or '').strip()
+        if search:
+            ventas = ventas.filter(
+                Q(principio_activo__icontains=search)
+                | Q(laboratorio__icontains=search)
+                | Q(comprador__icontains=search)
+            )
+        paginador = PaginacionMedicamentos()
+        pagina = paginador.paginate_queryset(ventas, request, view=self)
+        serializer = VentaMedicamentoSerializer(pagina, many=True)
+        return paginador.get_paginated_response(serializer.data)
+
+    def post(self, request):
+        serializer = RegistrarVentaSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        datos = serializer.validated_data
+
+        with transaction.atomic():
+            medicamento = (
+                ReporteMedicamento.objects.select_for_update()
+                .filter(pk=datos['medicamento_id'])
+                .first()
+            )
+            if not medicamento:
+                return Response(
+                    {'detalle': 'El medicamento seleccionado no existe.'},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+            cantidad = datos['cantidad']
+            if cantidad > medicamento.cantidad_comprada:
+                return Response(
+                    {
+                        'detalle': (
+                            f'Stock insuficiente para {medicamento.principio_activo}. '
+                            f'Disponible: {medicamento.cantidad_comprada} unidades.'
+                        )
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            medicamento.cantidad_comprada -= cantidad
+            medicamento.save(update_fields=['cantidad_comprada'])
+
+            total_venta = (medicamento.precio_unitario * Decimal(cantidad)).quantize(Decimal('0.01'))
+            venta = VentaMedicamento.objects.create(
+                medicamento=medicamento,
+                principio_activo=medicamento.principio_activo,
+                laboratorio=medicamento.laboratorio,
+                forma_farmaceutica=medicamento.forma_farmaceutica,
+                cantidad_vendida=cantidad,
+                precio_unitario=medicamento.precio_unitario,
+                total_venta=total_venta,
+                comprador=datos['comprador'],
+                vendedor=request.user.username,
+                observacion=(datos.get('observacion') or '').strip(),
+            )
+
+        return Response(
+            {
+                'venta': VentaMedicamentoSerializer(venta).data,
+                'medicamento': ReporteMedicamentoSerializer(medicamento).data,
+                'stock_restante': medicamento.cantidad_comprada,
+            },
+            status=status.HTTP_201_CREATED,
+        )
