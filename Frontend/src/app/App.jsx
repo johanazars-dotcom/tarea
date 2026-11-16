@@ -1,6 +1,4 @@
 import { useEffect, useState } from 'react';
-import fotoFarmaciaAtencion from '../assets/farmacia-atencion.jpg';
-import fotoHospitalPrincipal from '../assets/hospital-principal.jpg';
 import AccesoSuperusuario from '../features/autenticacion/AccesoSuperusuario';
 import TableroEstadisticas from '../features/estadisticas/TableroEstadisticas';
 import ExploracionMedicamentos from '../features/exploracion/ExploracionMedicamentos';
@@ -245,7 +243,7 @@ export default function App() {
         {paginaActiva === 'inicio' && (
           <>
             <section className="seccion-hero-hospital">
-              <div className="hero-hospital-grid">
+              <div className="hero-hospital-simple">
                 <div className="hero-hospital-texto">
                   <span className="eyebrow-salud">Información clara para el sector salud</span>
                   <h1>Gestión integral de medicamentos, ventas y auditoría hospitalaria</h1>
@@ -271,16 +269,6 @@ export default function App() {
                     </button>
                   </div>
                 </div>
-
-                <figure className="hero-hospital-fotografia">
-                  <img
-                    src={fotoHospitalPrincipal}
-                    alt="Profesional de salud brindando orientación clara y amable sobre documentación médica en recepción hospitalaria"
-                  />
-                  <figcaption>
-                    Atención organizada y transparente en farmacia institucional.
-                  </figcaption>
-                </figure>
               </div>
             </section>
 
@@ -387,14 +375,7 @@ export default function App() {
         {paginaActiva === 'institucion' && (
           <section className="banda-blanca banda-pagina-unica">
             <div className="contenedor-seccion seccion-institucional">
-              <div className="institucional-grid">
-                <figure className="institucional-fotografia">
-                  <img
-                    src={fotoFarmaciaAtencion}
-                    alt="Especialista de farmacia hospitalaria verificando existencias y presentaciones de medicamentos"
-                  />
-                </figure>
-
+              <div className="institucional-simple">
                 <div className="institucional-contenido">
                   <span className="eyebrow-salud">Sobre la plataforma y orientación al usuario</span>
                   <h2>Cobertura de catálogo, atención a usuarios y datos institucionales</h2>

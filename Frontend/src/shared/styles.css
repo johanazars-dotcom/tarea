@@ -340,6 +340,15 @@ select:focus-visible {
   align-items: center;
 }
 
+.hero-hospital-simple {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.institucional-simple {
+  max-width: 900px;
+}
+
 .hero-hospital-texto h1 {
   margin-top: 8px;
   font-family: var(--fuente-titulos);
